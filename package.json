@@ -1,0 +1,11 @@
+{
+    "name": "flux-gallery",
+    "version": "1.0.0",
+    "description": "FLUX — Interactive WebGL Distortion Gallery",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2"
+    }
+}
