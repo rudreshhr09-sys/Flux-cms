@@ -78,58 +78,60 @@ async function fetchSiteConfig() {
     }
 }
 
-// Render gallery items into the DOM
+// Render gallery items into the DOM using SLOT-BASED replacement.
+// Each Sanity item's "Display Order" field (1-6) maps to a specific
+// gallery position. Only matched slots are replaced; the rest stay as-is.
 function renderGalleryFromCMS(items) {
     const grid = document.querySelector('.gallery-grid');
     if (!grid || !items || items.length === 0) return false;
 
-    // Capture existing static items to allow partial overrides
+    // Capture existing static items (these are the 6 default images)
     const staticItems = Array.from(grid.querySelectorAll('.gallery-item'));
+    if (staticItems.length === 0) return false;
 
-    // Clear existing items
-    grid.innerHTML = '';
-
-    // Track how many items we've rendered from Sanity
-    let renderedCount = 0;
-
-    items.forEach((item, index) => {
-        const sizeClass = item.size && item.size !== 'default' ? `gi-${item.size}` : '';
-        const imgUrl = sanityImageUrl(item.image, 800);
-        const altText = item.alt || `${item.title} — ${item.category} Photography`;
-        const num = String(index + 1).padStart(2, '0');
-
-        const el = document.createElement('div');
-        el.className = `gallery-item ${sizeClass}`.trim();
-        el.setAttribute('data-cursor', 'view');
-        el.innerHTML = `
-            <div class="item-image-wrap">
-                <img src="${imgUrl}" alt="${altText}" class="gallery-img" data-webgl loading="lazy">
-            </div>
-            <div class="item-info">
-                <span class="item-num">${num}</span>
-                <div class="item-text">
-                    <h3 class="item-title">${item.title}</h3>
-                    <span class="item-cat">${item.category}</span>
-                </div>
-            </div>
-        `;
-        grid.appendChild(el);
-        renderedCount++;
+    // Build a map of slot number -> Sanity item
+    // "order" field = slot position (1-based: 1 = first image, 2 = second, etc.)
+    const slotMap = {};
+    items.forEach(item => {
+        const slot = item.order; // 1-based slot number
+        if (slot >= 1 && slot <= staticItems.length) {
+            slotMap[slot] = item;
+        }
     });
 
-    // If Sanity returned fewer items than the static galery (usually 6),
-    // append the remaining static items so the gallery doesn't shrink.
-    if (renderedCount < staticItems.length) {
-        for (let i = renderedCount; i < staticItems.length; i++) {
-            // Update the item-num to be sequenced correctly after the Sanity items
-            const currentItem = staticItems[i];
-            const numEl = currentItem.querySelector('.item-num');
-            if (numEl) {
-                numEl.textContent = String(i + 1).padStart(2, '0');
-            }
-            grid.appendChild(currentItem);
+    // Replace only the slots that have a Sanity override
+    staticItems.forEach((staticEl, index) => {
+        const slotNum = index + 1; // 1-based
+
+        if (slotMap[slotNum]) {
+            // This slot has a Sanity override — build a new element
+            const item = slotMap[slotNum];
+            const sizeClass = item.size && item.size !== 'default' ? `gi-${item.size}` : '';
+            const imgUrl = sanityImageUrl(item.image, 800);
+            const altText = item.alt || `${item.title} — ${item.category} Photography`;
+            const num = String(slotNum).padStart(2, '0');
+
+            const el = document.createElement('div');
+            el.className = `gallery-item ${sizeClass}`.trim();
+            el.setAttribute('data-cursor', 'view');
+            el.innerHTML = `
+                <div class="item-image-wrap">
+                    <img src="${imgUrl}" alt="${altText}" class="gallery-img" data-webgl loading="lazy">
+                </div>
+                <div class="item-info">
+                    <span class="item-num">${num}</span>
+                    <div class="item-text">
+                        <h3 class="item-title">${item.title}</h3>
+                        <span class="item-cat">${item.category}</span>
+                    </div>
+                </div>
+            `;
+
+            // Replace the static element in-place
+            grid.replaceChild(el, staticEl);
         }
-    }
+        // If no Sanity override for this slot, the static element stays untouched
+    });
 
     return true;
 }
@@ -181,4 +183,3 @@ async function initSanityContent() {
 
     return { galleryRendered, galleryItems, siteConfig };
 }
-
