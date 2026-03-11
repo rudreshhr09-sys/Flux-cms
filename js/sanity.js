@@ -6,7 +6,7 @@
 const SANITY_PROJECT_ID = 'tmu8b2ui';
 const SANITY_DATASET = 'production';
 const SANITY_API_VERSION = '2024-01-01';
-const SANITY_CDN = true; // Use CDN for faster reads
+const SANITY_CDN = false; // Disabled CDN for instant content updates
 
 // Base URL for Sanity API queries
 const SANITY_API_URL = `https://${SANITY_PROJECT_ID}.${SANITY_CDN ? 'apicdn' : 'api'}.sanity.io/v${SANITY_API_VERSION}/data/query/${SANITY_DATASET}`;
@@ -83,8 +83,14 @@ function renderGalleryFromCMS(items) {
     const grid = document.querySelector('.gallery-grid');
     if (!grid || !items || items.length === 0) return false;
 
-    // Clear existing static items
+    // Capture existing static items to allow partial overrides
+    const staticItems = Array.from(grid.querySelectorAll('.gallery-item'));
+
+    // Clear existing items
     grid.innerHTML = '';
+
+    // Track how many items we've rendered from Sanity
+    let renderedCount = 0;
 
     items.forEach((item, index) => {
         const sizeClass = item.size && item.size !== 'default' ? `gi-${item.size}` : '';
@@ -108,7 +114,22 @@ function renderGalleryFromCMS(items) {
             </div>
         `;
         grid.appendChild(el);
+        renderedCount++;
     });
+
+    // If Sanity returned fewer items than the static galery (usually 6),
+    // append the remaining static items so the gallery doesn't shrink.
+    if (renderedCount < staticItems.length) {
+        for (let i = renderedCount; i < staticItems.length; i++) {
+            // Update the item-num to be sequenced correctly after the Sanity items
+            const currentItem = staticItems[i];
+            const numEl = currentItem.querySelector('.item-num');
+            if (numEl) {
+                numEl.textContent = String(i + 1).padStart(2, '0');
+            }
+            grid.appendChild(currentItem);
+        }
+    }
 
     return true;
 }
@@ -160,3 +181,4 @@ async function initSanityContent() {
 
     return { galleryRendered, galleryItems, siteConfig };
 }
+
