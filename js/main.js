@@ -339,6 +339,7 @@ class Preloader {
     simulateLoad() {
         // Wait for all images + a minimum display time
         const images = document.querySelectorAll('img');
+        images.forEach(img => img.loading = 'eager');
         let loaded = 0;
         const total = images.length || 1;
 
